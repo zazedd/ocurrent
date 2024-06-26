@@ -7,7 +7,7 @@ let nix_command_to_string = function
 
 let nix command args =
   let command = nix_command_to_string command in
-  "", Array.of_list ("nix" :: [ command ] @ args @ [ "--verbose" ])
+  "", Array.of_list ("nix" :: [ command; "--verbose" ] @ args)
 
 let nix_shell args =
   "", Array.of_list ("nix-shell" :: args)
