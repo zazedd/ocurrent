@@ -89,11 +89,15 @@ let build { pool; timeout; level } job key =
         [ ".#" ]
     | `Path (path, name) -> [ Fpath.(to_string (dir // path)) ^ "#" ^ name ]
   in
-  (*let lock_file =*)
-  (*  match lock with*)
-  (*  | Some f -> *)
-  (*  | None -> Log.warn f (fun f -> f "No flake.lock file provided, this outcome is not reproducible!")*)
-  (*in*)
+  let _ =
+    match lock with
+    | Some x ->
+        Log.warn (fun f ->
+            f "flake.lock file provided: %s" (x |> Fpath.to_string))
+    | None ->
+        Log.warn (fun f ->
+            f "No flake.lock file provided, this outcome is not reproducible!")
+  in
   let cmd = Cmd.nix command (flake_file @ args) in
   (Current.Process.exec ~cancellable:true ~job cmd >|= function
    | Error _ as e -> e
