@@ -1,7 +1,7 @@
-let experimental_features = [ "--extra-experimental-features nix-command"; "--extra-experimental-features flakes" ]
+(*let experimental_features = [ "--extra-experimental-features nix-command"; "--extra-experimental-features flakes" ]*)
 
 let nix args =
-  "", Array.of_list ("nix" :: args @ experimental_features)
+  "", Array.of_list ("nix" :: args)
 
 let build args = nix ("build" :: args)
 

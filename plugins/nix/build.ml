@@ -12,7 +12,7 @@ module Key = struct
   type t = {
     commit : [ `No_context | `Git of Current_git.Commit.t | `Dir of Fpath.t ];
     (* `File (/path/to/somewhere, name) -> nix build /path/to/somewhere#name *)
-    flake : [`File of (Fpath.t * string) | `Contents of string];
+    flake : [ `File of (Fpath.t * string) | `Contents of string ];
     args : string list;
     path : Fpath.t option;
   }
