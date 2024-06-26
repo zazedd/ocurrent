@@ -7,17 +7,15 @@ container, etc. with that flake
 
 module Nix = struct
   module CC = Current_cache.Make(Nix_cmd)
-  let build command ~args ?level ?schedule ?timeout ?flake ?path ?pool commit =
+  let build_command command ~args ?level ?schedule ?timeout ?flake ?path ?pool commit =
     let flake =
       match flake with
-      | None -> `File (Fpath.v "flake.nix", "")
-      | Some (`File _ as f) -> f
+      | None -> `Path (Fpath.v "", "")
+      | Some (`Path _ as f) -> f
       | Some (`Contents c) -> `Contents c
     in
     CC.get ?schedule { pool; timeout; level }
     { Nix_cmd.Key.commit; flake; command; args; path }
-
-
 end
 
 module Default = struct
@@ -32,15 +30,12 @@ module Default = struct
     Current.component "build%a" pp_sp_label label |>
     let> commit = get_build_context src
     and> flake = Current.option_seq flake in
-    Nix.build `Build ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
+    Nix.build_command `Build ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
 
   let shell ?level ?schedule ?timeout ?label ?flake ?path ?pool ~args src =
     Current.component "shell%a" pp_sp_label label |>
     let> commit = get_build_context src
     and> flake = Current.option_seq flake in
-    Nix.build `Develop ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
-
+    Nix.build_command `Develop ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
 end
-
-
 
