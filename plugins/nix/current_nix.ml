@@ -17,9 +17,9 @@ module Nix = struct
       | Some (`Contents c) -> `Contents c
     in
     let lock =
-      match Sys.file_exists "flake.lock" with
-      | true -> Some (Fpath.v "./flake.lock")
-      | false -> None
+      match Unix.access "./flake.lock" [ Unix.F_OK ] with
+      | () -> Some (Fpath.v "./flake.lock")
+      | exception Unix.Unix_error (Unix.ENOENT, _, _) -> None
     in
     CC.get ?schedule { pool; timeout; level }
       { Nix_cmd.Key.commit; flake; lock; command; args; path }
