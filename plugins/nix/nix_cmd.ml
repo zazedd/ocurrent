@@ -92,19 +92,26 @@ let build { pool; timeout; level } job key =
   let _ =
     match lock with
     | Some x ->
-        Log.warn (fun f ->
+        Log.info (fun f ->
             f "flake.lock file provided: %s" (x |> Fpath.to_string))
     | None ->
         Log.warn (fun f ->
-            f "No flake.lock file provided, this outcome is not reproducible!")
+            f
+              "No flake.lock file provided, this outcome would not be \
+               reproducible! Current_nix will create a lock file for you.")
   in
   let cmd = Cmd.nix command (flake_file @ args) in
   (Current.Process.exec ~cancellable:true ~job cmd >|= function
    | Error _ as e -> e
    | Ok () ->
        Bos.OS.File.read Fpath.(dir / "flake.lock")
-       |> Stdlib.Result.map @@ fun hash ->
-          Log.info (fun f -> f "Built Nix Derivation. Lock file: %s" hash);
+       |> Stdlib.Result.map @@ fun content ->
+          Log.info (fun f -> f "Built Nix Derivation. Lock file: %s" content);
+          Log.info (fun f ->
+              f
+                "Writing lock file to local directory. TODO: git add and \
+                 commit this");
+          Bos.OS.File.write (Fpath.v "flake.lock") content |> ignore;
           ())
   >|= fun res ->
   Prometheus.Gauge.dec_one Metrics.nix_build_events;
