@@ -28,11 +28,11 @@ module Default = struct
     | `Git commit -> Current.map (fun x -> `Git x) commit
     | `Dir path -> Current.map (fun path -> `Dir path) path
 
-  let build ?level ?schedule ?timeout ?label ?flake ?path ?pool src =
+  let build ?level ?schedule ?timeout ?label ?flake ?path ?pool ~args src =
     Current.component "build%a" pp_sp_label label |>
     let> commit = get_build_context src
     and> flake = Current.option_seq flake in
-    Nix.build ~args:[] ?level ?schedule ?timeout ?flake ?path ?pool commit
+    Nix.build ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
 
 end
 
