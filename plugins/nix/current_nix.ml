@@ -34,6 +34,12 @@ module Default = struct
     and> flake = Current.option_seq flake in
     Nix.build `Build ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
 
+  let shell ?level ?schedule ?timeout ?label ?flake ?path ?pool ~args src =
+    Current.component "shell%a" pp_sp_label label |>
+    let> commit = get_build_context src
+    and> flake = Current.option_seq flake in
+    Nix.build `Develop ~args ?level ?schedule ?timeout ?flake ?path ?pool commit
+
 end
 
 
