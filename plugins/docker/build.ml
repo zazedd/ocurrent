@@ -111,7 +111,7 @@ let build { pull; pool; timeout; level } job key =
   | Error _ as e -> e
   | Ok () ->
     Bos.OS.File.read iidfile |> Stdlib.Result.map @@ fun hash ->
-    Log.info (fun f -> f "Built docker image %s" hash);
+      Log.info (fun f -> f "Built Nix package, lock file: %s" hash);
     Image.of_hash hash)
   >|= (fun res -> Prometheus.Gauge.dec_one Metrics.docker_build_events; res)
 

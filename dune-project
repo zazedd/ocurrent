@@ -176,6 +176,29 @@ multiple Docker Engine instances.")
   yojson))
 
 (package
+ (name current_nix)
+ (synopsis "OCurrent Nix plugin")
+ (description "\
+OCurrent provides an OCaml eDSL for writing CI/CD pipelines.
+
+Experimental Nix support")
+ (depends
+  (current (= :version))
+  (current_git (= :version))
+  (ocaml (>= 4.12.0))
+  (astring (>= 0.8.5))
+  (bos (>= 0.2.0))
+  (duration (>= 0.1.3))
+  (fmt (>= 0.8.9))
+  (fpath (>= 0.7.3))
+  (logs (>= 0.7.0))
+  (lwt (>= 5.6.1))
+  ppx_deriving
+  (ppx_deriving_yojson (>= 3.5.1))
+  (result (>= 1.5))
+  yojson))
+
+(package
  (name current_github)
  (synopsis "GitHub plugin for OCurrent")
  (description "\
