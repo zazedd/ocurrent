@@ -43,7 +43,7 @@ module Key = struct
       [
         ("commit", source_to_json commit);
         ("flake", digest_flake flake);
-        ("lock", digest_flake flake);
+        ("lock", `String lock);
         ("command", `String (Cmd.nix_command_to_string command));
         ("args", [%derive.to_yojson: string list] args);
         ( "path",
