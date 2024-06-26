@@ -1,15 +1,13 @@
 (*let experimental_features = [ "--extra-experimental-features nix-command"; "--extra-experimental-features flakes" ]*)
 
-let nix args =
-  "", Array.of_list ("nix" :: args @ [ "--verbose" ])
+let nix_command_to_string = function
+  | `Build -> "build" 
+  | `Run -> "run" 
+  | `Develop -> "develop" 
 
-let build args = nix ("build" :: args)
-
-let run args = nix ("run" :: args)
-
-let develop args = nix ("develop" :: args)
-
-let shell args = nix ("shell" :: args)
+let nix command args =
+  let command = nix_command_to_string command in
+  "", Array.of_list ("nix" :: [ command ] @ args @ [ "--verbose" ])
 
 let nix_shell args =
   "", Array.of_list ("nix-shell" :: args)

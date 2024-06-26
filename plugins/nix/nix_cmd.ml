@@ -13,6 +13,7 @@ module Key = struct
     commit : [ `No_context | `Git of Current_git.Commit.t | `Dir of Fpath.t ];
     (* `File (/path/to/somewhere, name) -> nix build /path/to/somewhere#name *)
     flake : [ `File of (Fpath.t * string) | `Contents of string ];
+    command : [`Build | `Run | `Develop ];
     args : string list;
     path : Fpath.t option;
   }
@@ -28,10 +29,11 @@ module Key = struct
 
   let pp_args = Fmt.(list ~sep:sp (quote string))
 
-  let to_json { commit; flake; args; path; } =
+  let to_json { commit; flake; command; args; path; } =
     `Assoc [
       "commit", source_to_json commit;
       "flake", digest_flake flake;
+      "command", `String (Cmd.nix_command_to_string command);
       "args", [%derive.to_yojson:string list] args;
       "path", Option.(value ~default:`Null (map (fun v -> `String (Fpath.to_string v)) path));
     ]
@@ -59,7 +61,7 @@ let handle_context ~job context fn =
   | `Git commit -> Current_git.with_checkout ~job commit fn
 
 let build { pool; timeout; level } job key =
-  let { Key.commit; flake; args; path } = key in
+  let { Key.commit; flake; command; args; path } = key in
   begin match flake with
     | `Contents contents ->
       Current.Job.log job "@[<v2>Using Flake:@,%a@]" Fmt.lines contents
@@ -80,7 +82,7 @@ let build { pool; timeout; level } job key =
     | `File (path, name) ->
       [Fpath.(to_string (dir // path)) ^ "#" ^ name]
   in
-  let cmd = Cmd.build (flake_file @ args) in
+  let cmd = Cmd.nix command (flake_file @ args) in
   Current.Process.exec ~cancellable:true ~job cmd
   >|= (function
     | Error _ as e -> e
