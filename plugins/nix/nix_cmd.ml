@@ -11,7 +11,7 @@ let id = "nix-command"
 module Key = struct
   type t = {
     commit : [ `No_context | `Git of Current_git.Commit.t | `Dir of Fpath.t ];
-    (* `File (/path/to/somewhere/with/flake/, name) -> nix build /path/to/somewhere/with/flake/#name *)
+    (* `Path (/path/to/somewhere/with/flake/, name) -> nix build /path/to/somewhere/with/flake/#name *)
     flake : [ `Path of Fpath.t * string | `Contents of string ];
     lock : Fpath.t option;
     command : [ `Build | `Run | `Develop ];
@@ -88,7 +88,10 @@ let build { pool; timeout; level } job key =
         Bos.OS.File.write Fpath.(dir / "flake.nix") (contents ^ "\n")
         |> or_raise;
         [ ".#" ]
-    | `Path (path, name) -> [ Fpath.(to_string (dir // path)) ^ "#" ^ name ]
+    | `Path (path, name) ->
+        if Fpath.to_string path = "." then
+          [ Fpath.(to_string dir) ^ "#" ^ name ]
+        else [ Fpath.(to_string (dir // path)) ^ "#" ^ name ]
   in
   let _ =
     match lock with
