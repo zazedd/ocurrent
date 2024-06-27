@@ -119,3 +119,13 @@ let build { pool; timeout; level } job key =
 
 let pp = Key.pp
 let auto_cancel = true
+
+(*
+
+TODO: search for the flake.lock file on the git repository as well instead of only localy
+TODO: add, commit and possibly push the flake.lock file to the git repo, if there was no flake.lock in the first place
+TODO: provide a way to chain commands for Nix.shell, possibly a list of lists 
+
+nix develop -c bash -c "Rscript --version && echo hello"
+
+*)

@@ -41,6 +41,25 @@ module Default = struct
       commit
 
   let shell ?level ?schedule ?timeout ?label ?flake ?path ?pool ~args src =
+    (*
+      [
+        [ "Rscript"; "--version" ];
+        [ "echo"; "hello" ];
+      ]
+      ->
+      [ "-c"; "bash"; "-c" "Rscript --version && echo hello" ];
+    *)
+    let args =
+      List.mapi
+        (fun i arg_list ->
+          if i <> List.length args - 1 then arg_list @ [ "&&" ] else arg_list)
+        args
+      |> List.fold_left
+           (fun acc arg_list ->
+             acc ^ List.fold_left (fun acc2 arg -> acc2 ^ " " ^ arg) "" arg_list)
+           ""
+    in
+    let args = [ "-c"; "bash"; "-c"; args ] in
     Current.component "shell%a" pp_sp_label label
     |>
     let> commit = get_build_context src and> flake = Current.option_seq flake in
