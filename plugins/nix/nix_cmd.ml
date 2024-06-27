@@ -6,7 +6,7 @@ type t = {
   level : Current.Level.t option;
 }
 
-let id = "docker-run"
+let id = "nix-command"
 
 module Key = struct
   type t = {
@@ -84,6 +84,7 @@ let build { pool; timeout; level } job key =
   let flake_file =
     match flake with
     | `Contents contents ->
+        (* need a way to define name *)
         Bos.OS.File.write Fpath.(dir / "flake.nix") (contents ^ "\n")
         |> or_raise;
         [ ".#" ]
@@ -111,6 +112,7 @@ let build { pool; timeout; level } job key =
               f
                 "Writing lock file to local directory. TODO: git add and \
                  commit this");
+          (* write to the location of the flake.nix *)
           Bos.OS.File.write (Fpath.v "flake.lock") content |> ignore;
           ())
   >|= fun res ->
@@ -124,8 +126,8 @@ let auto_cancel = true
 
 TODO: search for the flake.lock file on the git repository as well instead of only localy
 TODO: add, commit and possibly push the flake.lock file to the git repo, if there was no flake.lock in the first place
-TODO: provide a way to chain commands for Nix.shell, possibly a list of lists 
 
-nix develop -c bash -c "Rscript --version && echo hello"
+DONE
+-> provide a way to chain commands for Nix.shell, possibly a list of lists 
 
 *)
