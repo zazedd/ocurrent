@@ -66,7 +66,7 @@ let handle_context ~job context fn =
   | `No_context -> Current.Process.with_tmpdir ~prefix:"build-context-" fn
   | `Dir path ->
       Current.Process.with_tmpdir ~prefix:"build-context-" @@ fun dir ->
-      Current.Process.exec ~cwd:dir ~cancellable:true ~job
+      Current.Process.exec ~cwd:dir ~cancellable:false ~job
         ("", [| "rsync"; "-aHq"; Fpath.to_string path ^ "/"; "." |])
       >>= fun () -> fn dir
   | `Git commit -> Current_git.with_checkout ~job commit fn
@@ -105,7 +105,7 @@ let build { pool; timeout; level } job key =
                reproducible! Current_nix will create a lock file for you.")
   in
   let cmd = Cmd.nix command (flake_file @ args) in
-  (Current.Process.exec ~cancellable:true ~job cmd >|= function
+  (Current.Process.exec ~cancellable:false ~job cmd >|= function
    | Error _ as e -> e
    | Ok () ->
        Bos.OS.File.read Fpath.(dir / "flake.lock")
