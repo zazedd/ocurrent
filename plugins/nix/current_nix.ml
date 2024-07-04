@@ -5,6 +5,8 @@ open Current.Syntax
    container, etc. with that flake
 *)
 
+module Nix_cmd = Nix_cmd
+
 module Nix = struct
   module CC = Current_cache.Make (Nix_cmd)
 
