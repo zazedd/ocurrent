@@ -128,7 +128,3 @@ let build { pool; timeout; level } job key =
 
 let pp = Key.pp
 let auto_cancel = true
-
-(*
-TODO: search for the flake.lock file on the git repository as well instead of only localy
-*)
