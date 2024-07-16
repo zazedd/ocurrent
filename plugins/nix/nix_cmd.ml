@@ -6,13 +6,18 @@ type t = {
   level : Current.Level.t option;
 }
 
+type flake = {
+  (* `Path (/path/to/somewhere/with/a/flake.nix, name) -> nix build /path/to/somewhere/with/a#name *)
+  content : [ `Path of Fpath.t | `Contents of string ];
+  name : string;
+}
+
 let id = "nix-command"
 
 module Key = struct
   type t = {
     commit : [ `No_context | `Git of Current_git.Commit.t | `Dir of Fpath.t ];
-    (* `Path (/path/to/somewhere/with/flake/, name) -> nix build /path/to/somewhere/with/flake/#name *)
-    flake : [ `Path of Fpath.t * string | `Contents of string ];
+    flake : flake;
     lock : Fpath.t option;
     command : [ `Build | `Run | `Develop ];
     args : string list;
@@ -20,11 +25,16 @@ module Key = struct
   }
 
   let digest_flake = function
-    | `Path (path, name) ->
-        `Assoc [ ("path", `String (Fpath.to_string path ^ "#" ^ name)) ]
-    | `Contents contents ->
+    | { content = `Path path; name } ->
+        `Assoc [ ("flake: path", `String (Fpath.to_string path ^ "#" ^ name)) ]
+    | { content = `Contents contents; name } ->
         `Assoc
-          [ ("contents", `String (Digest.string contents |> Digest.to_hex)) ]
+          [
+            ( "flake: contents",
+              `String
+                ((Digest.string contents |> Digest.to_hex) ^ ", name: " ^ name)
+            );
+          ]
 
   let source_to_json = function
     | `No_context -> `Null
@@ -74,21 +84,20 @@ let handle_context ~job context fn =
 let build { pool; timeout; level } job key =
   let { Key.commit; flake; lock; command; args; path } = key in
   (match flake with
-  | `Contents contents ->
+  | { content = `Contents contents; _ } ->
       Current.Job.log job "@[<v2>Using Flake:@,%a@]" Fmt.lines contents
-  | `Path _ -> ());
+  | { content = `Path _; _ } -> ());
   let level = Option.value level ~default:Current.Level.Average in
   Current.Job.start ?timeout job ?pool ~level >>= fun () ->
   handle_context ~job commit @@ fun dir ->
   let dir = match path with Some path -> Fpath.(dir // path) | None -> dir in
   let flake_file =
     match flake with
-    | `Contents contents ->
-        (* need a way to define name *)
+    | { content = `Contents contents; name } ->
         Bos.OS.File.write Fpath.(dir / "flake.nix") (contents ^ "\n")
         |> or_raise;
-        [ ".#" ]
-    | `Path (path, name) ->
+        [ ".#" ^ name ]
+    | { content = `Path path; name } ->
         if Fpath.to_string path = "." then
           [ Fpath.(to_string dir) ^ "#" ^ name ]
         else [ Fpath.(to_string (dir // path)) ^ "#" ^ name ]
@@ -101,22 +110,17 @@ let build { pool; timeout; level } job key =
     | None ->
         Log.warn (fun f ->
             f
-              "No flake.lock file provided, this outcome would not be \
-               reproducible! Current_nix will create a lock file for you.")
+              "No flake.lock file provided, this outcome will NOT be \
+               reproducible! Please, provide a lock file.")
   in
   let cmd = Cmd.nix command (flake_file @ args) in
   (Current.Process.exec ~cancellable:false ~job cmd >|= function
    | Error _ as e -> e
    | Ok () ->
        Bos.OS.File.read Fpath.(dir / "flake.lock")
-       |> Stdlib.Result.map @@ fun content ->
-          Log.info (fun f -> f "Built Nix Derivation. Lock file: %s" content);
+       |> Stdlib.Result.map @@ fun lock_content ->
           Log.info (fun f ->
-              f
-                "Writing lock file to local directory. TODO: git add and \
-                 commit this");
-          (* write to the location of the flake.nix *)
-          Bos.OS.File.write (Fpath.v "flake.lock") content |> ignore;
+              f "Built Nix Derivation. Lock file: %s" lock_content);
           ())
   >|= fun res ->
   Prometheus.Gauge.dec_one Metrics.nix_build_events;
@@ -126,11 +130,5 @@ let pp = Key.pp
 let auto_cancel = true
 
 (*
-
 TODO: search for the flake.lock file on the git repository as well instead of only localy
-TODO: add, commit and possibly push the flake.lock file to the git repo, if there was no flake.lock in the first place
-
-DONE
--> provide a way to chain commands for Nix.shell, possibly a list of lists 
-
 *)

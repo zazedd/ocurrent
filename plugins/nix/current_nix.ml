@@ -13,15 +13,20 @@ module Nix = struct
   let build_command command ~args ?level ?schedule ?timeout ?flake ?path ?pool
       commit =
     let flake =
+      let open Nix_cmd in
       match flake with
-      | None -> `Path (Fpath.v ".", "")
-      | Some (`Path _ as f) -> f
-      | Some (`Contents c) -> `Contents c
+      | None -> { content = `Path (Fpath.v "."); name = "" }
+      | Some f -> f
+    in
+    let lock_location =
+      match path with
+      | Some p -> Fpath.(p / "flake.lock")
+      | None -> Fpath.v "flake.lock"
     in
     let lock =
-      match Unix.access "./flake.lock" [ Unix.F_OK ] with
-      | () -> Some (Fpath.v "./flake.lock")
-      | exception Unix.Unix_error (Unix.ENOENT, _, _) -> None
+      match Bos.OS.File.read lock_location with
+      | Ok _ -> Some lock_location
+      | Error _ -> None
     in
     CC.get ?schedule { pool; timeout; level }
       { Nix_cmd.Key.commit; flake; lock; command; args; path }
