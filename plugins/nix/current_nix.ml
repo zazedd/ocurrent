@@ -8,7 +8,7 @@ open Current.Syntax
 module Nix_cmd = Nix_cmd
 
 module Nix = struct
-  module CC = Current_cache.Make (Nix_cmd)
+  module CC = Current_cache.Output (Nix_cmd)
 
   let build_command command ~args ?level ?schedule ?timeout ?flake ?path ?pool
       commit =
@@ -28,8 +28,8 @@ module Nix = struct
       | Ok _ -> Some lock_location
       | Error _ -> None
     in
-    CC.get ?schedule { pool; timeout; level }
-      { Nix_cmd.Key.commit; flake; lock; command; args; path }
+    CC.set ?schedule { pool; timeout; level }
+      { Nix_cmd.Key.commit; lock; command; args; path } { Nix_cmd.Value.flake }
 end
 
 module Default = struct

@@ -17,33 +17,18 @@ let id = "nix-command"
 module Key = struct
   type t = {
     commit : [ `No_context | `Git of Current_git.Commit.t | `Dir of Fpath.t ];
-    flake : flake;
     lock : Fpath.t option;
     command : [ `Build | `Run | `Develop ];
     args : string list;
     path : Fpath.t option;
   }
 
-  let digest_flake = function
-    | { content = `Path path; name } ->
-        `Assoc [ ("flake: path", `String (Fpath.to_string path ^ "#" ^ name)) ]
-    | { content = `Contents contents; name } ->
-        `Assoc
-          [
-            ( "flake: contents",
-              `String
-                ((Digest.string contents |> Digest.to_hex) ^ ", name: " ^ name)
-            );
-          ]
-
   let source_to_json = function
     | `No_context -> `Null
     | `Git commit -> `String (Current_git.Commit.hash commit)
     | `Dir path -> `String (Fpath.to_string path)
 
-  let pp_args = Fmt.(list ~sep:sp (quote string))
-
-  let to_json { commit; flake; lock; command; args; path } =
+  let to_json { commit; lock; command; args; path } =
     let lock =
       match lock with
       | Some p -> "lock file at: " ^ Fpath.to_string p
@@ -52,7 +37,6 @@ module Key = struct
     `Assoc
       [
         ("commit", source_to_json commit);
-        ("flake", digest_flake flake);
         ("lock", `String lock);
         ("command", `String (Cmd.nix_command_to_string command));
         ("args", [%derive.to_yojson: string list] args);
@@ -66,7 +50,26 @@ module Key = struct
   let pp f t = Yojson.Safe.pretty_print f (to_json t)
 end
 
-module Value = Current.Unit
+module Value = struct
+  type t = { flake : flake }
+
+  let digest_flake = function
+    | { content = `Path path; name } ->
+        `Assoc [ ("flake: path", `String (Fpath.to_string path ^ "#" ^ name)) ]
+    | { content = `Contents contents; name } ->
+        `Assoc
+          [
+            ( "flake: contents",
+              `String
+                ((Digest.string contents |> Digest.to_hex) ^ ", name: " ^ name)
+            );
+          ]
+
+  let to_json t = `Assoc [ ("lock", digest_flake t.flake) ]
+  let digest t = t |> to_json |> Yojson.Safe.to_string
+end
+
+module Outcome = Current.Unit
 
 let or_raise = function Ok () -> () | Error (`Msg m) -> raise (Failure m)
 
@@ -81,8 +84,9 @@ let handle_context ~job context fn =
       >>= fun () -> fn dir
   | `Git commit -> Current_git.with_checkout ~job commit fn
 
-let build { pool; timeout; level } job key =
-  let { Key.commit; flake; lock; command; args; path } = key in
+let publish { pool; timeout; level } job key value =
+  let { Key.commit; lock; command; args; path } = key in
+  let { Value.flake } = value in
   (match flake with
   | { content = `Contents contents; _ } ->
       Current.Job.log job "@[<v2>Using Flake:@,%a@]" Fmt.lines contents
@@ -114,17 +118,21 @@ let build { pool; timeout; level } job key =
                reproducible! Please, provide a lock file.")
   in
   let cmd = Cmd.nix command (flake_file @ args) in
-  (Current.Process.exec ~cancellable:false ~job cmd >|= function
-   | Error _ as e -> e
-   | Ok () ->
-       Bos.OS.File.read Fpath.(dir / "flake.lock")
-       |> Stdlib.Result.map @@ fun lock_content ->
-          Log.info (fun f ->
-              f "Built Nix Derivation. Lock file: %s" lock_content);
-          ())
+  begin Current.Process.exec ~cancellable:false ~job cmd >|= function
+    | Error _ as e -> e
+    | Ok () ->
+        Bos.OS.File.read Fpath.(dir / "flake.lock")
+        |> Stdlib.Result.map @@ fun lock ->
+            Log.info (fun f -> f "Built Nix Derivation. Lock file: %s" lock);
+            ()
+  end
   >|= fun res ->
   Prometheus.Gauge.dec_one Metrics.nix_build_events;
   res
 
-let pp = Key.pp
+let pp f (k, v) =
+  let `Assoc k_json = Key.to_json k in
+  let `Assoc v_json = Value.to_json v in
+  Yojson.Safe.pretty_print f (`Assoc (k_json @ v_json))
+
 let auto_cancel = true
