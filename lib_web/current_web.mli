@@ -108,7 +108,7 @@ module Resource : sig
   end
 end
 
-val routes : ?prefix:string -> Current.Engine.t -> Resource.t Routes.route list
+val routes : Current.Engine.t -> Resource.t Routes.route list
 (** [routes engine] is the default routes for a web interface to [engine]. *)
 
 val run : ?mode:Conduit_lwt_unix.server -> Site.t -> ('a, [`Msg of string]) result Lwt.t
