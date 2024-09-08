@@ -3,6 +3,7 @@ open Lwt.Infix
 let dot_to_svg = ("", [| "dot"; "-Tsvg" |])
 
 let render_svg ctx a =
+  let prefix = let open Context in let open Site in ctx.site.href_prefix in
   let uri = Context.uri ctx in
   let env = Uri.query uri |> List.filter_map (function
       | (_, []) -> None
@@ -11,9 +12,9 @@ let render_svg ctx a =
   let old_query = Uri.query uri in
   let collapse_link ~k ~v =
       let query = (k, [v]) :: List.remove_assoc k old_query in
-      Some (Uri.make ~path:"/" ~query () |> Uri.to_string)
+      Some (Uri.make ~path:"/" ~query () |> Uri.to_string |> Utils.ps_href ~prefix)
   and job_info { Current.Metadata.job_id; update } =
-    let url = job_id |> Option.map (fun id -> Fmt.str "/job/%s" id) in
+    let url = job_id |> Option.map (fun id -> Fmt.str "/job/%s" id |> Utils.ps_href ~prefix) in
     update, url
   in
   let dotfile = Fmt.to_to_string (Current.Analysis.pp_dot ~env ~collapse_link ~job_info) a in
