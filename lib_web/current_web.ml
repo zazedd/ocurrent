@@ -38,22 +38,23 @@ let set_confirm ~engine = object
     | _ -> Context.respond_error ctx `Bad_request "Missing level"
 end
 
-let routes engine =
+let routes ?(prefix = "") engine =
+  let prf thing = if prefix = "" then thing else Routes.(s prefix / thing) in
   Routes.[
     nil @--> Main.r ~engine;
-    s "index.html" /? nil @--> Main.r ~engine;
-    s "pipeline.svg" /? nil @--> Pipeline.r ~engine;
-    s "query" /? nil @--> Query.r ~engine;
-    s "log-rules" /? nil @--> Log_rules.r;
-    s "log-rules" / s "rules.csv" /? nil @--> Log_rules.rules_csv;
-    s "metrics" /? nil @--> metrics ~engine;
-    s "set" / s "confirm" /? nil @--> set_confirm ~engine;
-    s "jobs" /? nil @--> Jobs.r;
-    s "logout" /? nil @--> Resource.logout;
-    s "css" / s "ansi.css" /? nil @--> Resource.static ~content_type:"text/css" Ansi.css;
-    s "css" / str /? nil @--> Resource.crunch ~content_type:"text/css";
-    s "js" / str /? nil @--> Resource.crunch ~content_type:"text/javascript";
-    s "img" / str /? nil @--> Resource.crunch;
+    (s "index.html" |> prf) /? nil @--> Main.r ~engine;
+    (s "pipeline.svg" |> prf) /? nil @--> Pipeline.r ~engine;
+    (s "query" |> prf) /? nil @--> Query.r ~engine;
+    (s "log-rules" |> prf) /? nil @--> Log_rules.r;
+    (s "log-rules" / s "rules.csv" |> prf) /? nil @--> Log_rules.rules_csv;
+    (s "metrics" |> prf) /? nil @--> metrics ~engine;
+    (s "set" / s "confirm" |> prf) /? nil @--> set_confirm ~engine;
+    (s "jobs" |> prf) /? nil @--> Jobs.r;
+    (s "logout" |> prf) /? nil @--> Resource.logout;
+    (s "css" / s "ansi.css" |> prf) /? nil @--> Resource.static ~content_type:"text/css" Ansi.css;
+    (s "css" / str |> prf) /? nil @--> Resource.crunch ~content_type:"text/css";
+    (s "js" / str |> prf) /? nil @--> Resource.crunch ~content_type:"text/javascript";
+    (s "img" / str |> prf) /? nil @--> Resource.crunch;
   ] @ Job.routes ~engine
 
 let handle_request ~site _conn request body =
