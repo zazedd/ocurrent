@@ -17,3 +17,7 @@ let p_href ~prefix h =
 let p_action ~prefix h =
   let open Tyxml.Html in
   ps_href ~prefix h |> a_action
+
+let p_data ~prefix h =
+  let open Tyxml.Html in
+  ps_href ~prefix h |> a_data

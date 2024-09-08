@@ -34,6 +34,7 @@ let r ~engine = object
   val! can_get = `Viewer
 
   method! private get ctx =
+    let prefix = ctx.site.href_prefix in
     let uri = Context.uri ctx in
     let config = Current.Engine.config engine in
     let { Current.Engine.value; jobs = _ } = Current.Engine.state engine in
@@ -41,7 +42,7 @@ let r ~engine = object
     let path = "/pipeline.svg?" ^ (Option.value verbatim_query ~default:"") in
     Context.respond_ok ctx ?refresh:ctx.site.refresh_pipeline [
       div [
-        object_ ~a:[a_data path] [txt "Pipeline diagram"];
+        object_ ~a:[Utils.p_data ~prefix path] [txt "Pipeline diagram"];
       ];
       h2 [txt "Result"];
       p (render_result value);
