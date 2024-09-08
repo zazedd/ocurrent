@@ -2,7 +2,7 @@ open Tyxml.Html
 
 module Job = Current.Job
 
-let render_row (id, job) =
+let render_row ~prefix (id, job) =
   let url = Fmt.str "/job/%s" id in
   let start_time =
     match Lwt.state (Job.start_time job) with
@@ -11,7 +11,7 @@ let render_row (id, job) =
     | Lwt.Fail f -> Printexc.to_string f
   in
   tr [
-    td [ a ~a:[a_href url] [txt id] ];
+    td [ a ~a:[Utils.p_href ~prefix url] [txt id] ];
     td [ txt start_time ];
   ]
 
@@ -21,6 +21,7 @@ let r = object
   val! can_get = `Viewer
 
   method! private get ctx =
+    let prefix = ctx.site.href_prefix in
     let jobs = Current.Job.jobs () in
     Context.respond_ok ctx ?refresh:ctx.site.refresh_pipeline (
       if Current.Job.Map.is_empty jobs then [
@@ -33,7 +34,7 @@ let r = object
                 th [txt "Start time"];
               ]
             ])
-          (Current.Job.Map.bindings jobs |> List.map render_row)
+          (Current.Job.Map.bindings jobs |> List.map (render_row ~prefix))
       ]
     )
 

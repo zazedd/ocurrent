@@ -8,6 +8,7 @@ let render_result = function
   | Error (`Msg msg) -> [txt ("ERROR: " ^ msg)]
 
 let settings ctx config =
+  let prefix = let open Context in let open Site in ctx.site.href_prefix in
   let selected = Current.Config.get_confirm config in
   let levels =
     Current.Level.values
@@ -18,7 +19,7 @@ let settings ctx config =
     option ~a:(a_value s :: sel) (txt msg)
   in
   let csrf = Context.csrf ctx in
-  form ~a:[a_action "/set/confirm"; a_method `Post; a_class ["settings-form"]] [
+  form ~a:[Utils.p_action ~prefix "/set/confirm"; a_method `Post; a_class ["settings-form"]] [
     select ~a:[a_name "level"] (
       let sel = if selected = None then [a_selected ()] else [] in
       option ~a:(a_value "none" :: sel) (txt "No confirmation required") :: List.rev levels

@@ -47,6 +47,7 @@ module Site : sig
     ?authn:(csrf:string -> Uri.t) ->
     ?secure_cookies:bool ->
     ?refresh_pipeline:int ->
+    ?href_prefix:string ->
     has_role:(User.t option -> Role.t -> bool) ->
     raw_resource Routes.route list -> t
   (** [v ~name ~authn ~has_role routes] is a site named [name] (used for the HTML title, etc)

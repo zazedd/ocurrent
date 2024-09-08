@@ -52,33 +52,34 @@ let uri t = Cohttp.Request.uri (request t)
 
 let html_to_string = Fmt.to_to_string (Tyxml.Html.pp ())
 
-let logout_form t user =
+let logout_form ~prefix t user =
   let link_path = "/logout" in
   let link_label = Fmt.str "Log out %s" (User.id user) in
   let open Tyxml.Html in
   [
     li [
-      form ~a:[a_action link_path; a_method `Post] [
+      form ~a:[Utils.p_action ~prefix link_path; a_method `Post] [
         button [txt link_label];
         input ~a:[a_name "csrf"; a_input_type `Hidden; a_value (csrf t)] ();
       ]
     ]
   ]
 
-let render_nav_link (link_label, path) =
+let render_nav_link ~prefix (link_label, path) =
   let open Tyxml.Html in
-  li [a ~a:[a_href path; a_class ["nav-menu-option"]] [txt link_label]]
+  li [a ~a:[Utils.p_href ~prefix path; a_class ["nav-menu-option"]] [txt link_label]]
 
 let template t ?refresh contents =
   let site = t.site in
+  let prefix = site.href_prefix in
   let open Tyxml.Html in
   html_to_string (
     html
       (head (title (txt site.name)) (
           let tags = [
-            link ~rel:[ `Stylesheet ] ~href:"/css/normalize.css" ();
-            link ~rel:[ `Stylesheet ] ~href:"/css/ansi.css" ();
-            link ~rel:[ `Stylesheet ] ~href:"/css/style.css" ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/normalize.css") ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/ansi.css") ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/style.css") ();
             link ~rel:[ `Icon ] ~href:img_dashboard_logo ();
             meta ~a:[a_charset "UTF-8"] ();
           ] in
@@ -89,11 +90,11 @@ let template t ?refresh contents =
       )
       (body [
           nav [
-            a ~a:[a_href "/"] [img ~alt:"" ~src:img_dashboard_logo ~a:[ a_height 29; a_width 29 ] ()];
+            a ~a:[Utils.p_href ~prefix "/"] [img ~alt:"" ~src:img_dashboard_logo ~a:[ a_height 29; a_width 29 ] ()];
             div ~a:[a_class ["site-name"]] [txt site.name];
             ul (
-              li [a ~a:[a_href "/"; a_class ["nav-menu-option"]] [txt "Home"]] ::
-              List.map render_nav_link site.nav_links
+              li [a ~a:[Utils.p_href ~prefix "/"; a_class ["nav-menu-option"]] [txt "Home"]] ::
+              List.map (render_nav_link ~prefix) site.nav_links
             );
             ul ~a:[a_class ["right"]] (
               match t.site.authn with
@@ -102,8 +103,8 @@ let template t ?refresh contents =
                 match t.user with
                 | None ->
                   let uri = login_uri ~csrf:(csrf t) in
-                  [li [a ~a:[a_href (Uri.to_string uri); a_class ["nav-menu-option"]] [txt "Log in"]]]
-                | Some user -> logout_form t user
+                  [li [a ~a:[Uri.to_string uri |> Utils.p_href ~prefix; a_class ["nav-menu-option"]] [txt "Log in"]]]
+                | Some user -> logout_form ~prefix t user
             )
           ];
           div ~a:[a_id "main"] contents

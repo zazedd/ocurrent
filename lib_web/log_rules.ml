@@ -25,7 +25,7 @@ let dump_groups f groups =
     done
   )
 
-let test_pattern pattern =
+let test_pattern ~prefix pattern =
   let re = Re.Pcre.re pattern |> Re.compile in
   let recent_jobs = Lazy.force get_recent_jobs in
   let jobs = Current.Db.query recent_jobs Sqlite3.Data.[ INT 10000L ] in
@@ -75,23 +75,23 @@ let test_pattern pattern =
         (results |> List.map @@ fun (job_id, text) ->
          let job = Fmt.str "/job/%s" job_id in
          tr [
-           td [ a ~a:[a_href job] [txt job_id] ];
+           td [ a ~a:[Utils.p_href ~prefix job] [txt job_id] ];
            td [pre [txt text]]
          ]
         )
     ]
 
-let import csrf =
+let import ~prefix csrf =
   let open Tyxml.Html in
-  form ~a:[a_action "/log-rules"; a_method `Post; a_enctype "multipart/form-data"] [
+  form ~a:[Utils.p_action ~prefix "/log-rules"; a_method `Post; a_enctype "multipart/form-data"] [
     input ~a:[a_input_type `File; a_id "import"; a_name "import"; a_value "Import rules"; a_accept ["text/csv"]] ();
     input ~a:[a_input_type `Submit; a_value "Import rule set"] ();
     input ~a:[a_name "csrf"; a_input_type `Hidden; a_value csrf] ();
   ]
 
-let export csrf =
+let export ~prefix csrf =
   let open Tyxml.Html in
-  form ~a:[a_action "/log-rules/rules.csv"; a_method `Get] [
+  form ~a:[Utils.p_action ~prefix "/log-rules/rules.csv"; a_method `Get] [
     input ~a:[a_input_type `Submit; a_name "export"; a_value "Export rules"] ();
     input ~a:[a_name "csrf"; a_input_type `Hidden; a_value csrf] ();
   ]
@@ -111,6 +111,7 @@ let csv_hints =
    p [ txt "New rules with existing "; code [txt "pattern"]; txt " override previous definition."]]
 
 let render ?msg ?test ?(pattern="") ?(report="") ?(score="") ctx =
+  let prefix = let open Context in let open Site in ctx.site.href_prefix in
   let rules = LM.list_rules () in
   let message = match msg with
     | None -> []
@@ -118,11 +119,11 @@ let render ?msg ?test ?(pattern="") ?(report="") ?(score="") ctx =
   in
   begin match test with
     | None -> Lwt.return []
-    | Some p -> test_pattern p
+    | Some p -> test_pattern ~prefix p
   end >>= fun test_results ->
   let csrf = Context.csrf ctx in
   Context.respond_ok ctx (message @ [
-      form ~a:[a_action "/log-rules"; a_method `Post; a_class ["log-rules"]] [
+      form ~a:[Utils.p_action ~prefix "/log-rules"; a_method `Post; a_class ["log-rules"]] [
         table ~a:[a_class ["table"; "log-rules"]]
           ~thead:(thead [
               tr [
@@ -145,7 +146,7 @@ let render ?msg ?test ?(pattern="") ?(report="") ?(score="") ctx =
         input ~a:[a_input_type `Submit; a_name "remove"; a_value "Remove rule"] ();
         input ~a:[a_name "csrf"; a_input_type `Hidden; a_value csrf] ();
       ]
-    ] @ (match ctx.user with None -> [] | Some _ -> [import csrf; export csrf])
+    ] @ (match ctx.user with None -> [] | Some _ -> [import ~prefix csrf; export ~prefix csrf])
       @ pattern_hints :: csv_hints @ test_results)
 
 let validate_rule pattern report score =

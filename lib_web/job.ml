@@ -19,8 +19,9 @@ let read ~start path =
   really_input_string ch (Int64.to_int len), start + len
 
 let render ctx ~actions ~job_id ~log:path =
+  let prefix = let open Context in let open Site in ctx.site.href_prefix in
   let ansi = Ansi.create () in
-  let action op = a_action (Fmt.str "/job/%s/%s" job_id op) in
+  let action op = Utils.p_action ~prefix (Fmt.str "/job/%s/%s" job_id op) in
   let csrf = Context.csrf ctx in
   let rebuild_button =
     if actions#rebuild = None then []

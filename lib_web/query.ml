@@ -10,7 +10,7 @@ let pp_duration f x =
   | 0. -> Fmt.string f "0"
   | _ -> Fmt.(pf f "%a" uint64_ns_span (Int64.of_float (x *. 1.e9)))
 
-let render_row ~jobs ~need_toggles { Db.job_id; build; value = _; rebuild; ready; running; finished; outcome } =
+let render_row ~prefix ~jobs ~need_toggles { Db.job_id; build; value = _; rebuild; ready; running; finished; outcome } =
   let job = Fmt.str "/job/%s" job_id in
   let times =
     match running with
@@ -22,7 +22,7 @@ let render_row ~jobs ~need_toggles { Db.job_id; build; value = _; rebuild; ready
         pp_duration (finished -. running)
   in
   let cols = [
-    td [ a ~a:[a_href job] [txt job_id] ];
+    td [ a ~a:[Utils.p_href ~prefix job] [txt job_id] ];
     td [ txt (Int64.to_string build) ];
     td [ render_value outcome ];
     td [ txt (if rebuild then "Needs rebuild" else "-") ];
@@ -94,6 +94,7 @@ let r ~engine = object
   val! can_post = `Builder
 
   method! private get ctx =
+    let prefix = ctx.site.href_prefix in
     let uri = Context.uri ctx in
     let ok = bool_param "ok" uri in
     let rebuild = bool_param "rebuild" uri in
@@ -122,7 +123,7 @@ let r ~engine = object
         th [input ~a:[a_input_type `Checkbox; a_id "select-all"; a_autocomplete `Off; a_onclick js] ()] :: headings
       else headings in
     Context.respond_ok ctx [
-      form ~a:[a_action "/query"; a_method `Get] [
+      form ~a:[Utils.p_action ~prefix "/query"; a_method `Get] [
         ul ~a:[a_class ["query-form"]] [
             li [txt "Operation type:"; enum_option ~choices:ops "op" op];
             li [txt "Result:"; bool_option "ok" ok ~t:"Passed" ~f:"Failed"];
@@ -131,12 +132,12 @@ let r ~engine = object
             li [input ~a:[a_input_type `Submit; a_value "Submit"] ()];
           ];
       ];
-      form ~a:[a_action "/query"; a_method `Post] (
+      form ~a:[Utils.p_action ~prefix "/query"; a_method `Post] (
         input ~a:[a_input_type `Hidden; a_value (Context.csrf ctx); a_name "csrf"] () ::
         rebuild_selected_button @
         table ~a:[a_class ["table"]]
           ~thead:(thead [tr headings])
-          (List.map (render_row ~jobs ~need_toggles) results) ::
+          (List.map (render_row ~prefix ~jobs ~need_toggles) results) ::
         rebuild_selected_button
       )
     ]
@@ -164,7 +165,7 @@ let r ~engine = object
               ()
         );
       match !failed with
-      | [] -> Context.respond_redirect ctx (Uri.of_string "/query")
+      | [] -> Context.respond_redirect ctx ("/query" |> Utils.ps_href ~prefix:ctx.site.href_prefix |> Uri.of_string)
       | failed ->
         let msg =
           Fmt.str "%d/%d jobs could not be restarted (because they are no longer active): %a"

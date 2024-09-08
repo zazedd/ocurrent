@@ -11,7 +11,7 @@ let forbidden (ctx : Context.t) =
     let uri = login_uri ~csrf:(Context.csrf ctx) in
     Context.respond_ok ctx Tyxml.Html.[
         txt "Permission denied - you need to ";
-        a ~a:[a_href (Uri.to_string uri)] [ txt "log in" ]
+        a ~a:[uri |> Uri.to_string |> Utils.p_href ~prefix:ctx.site.href_prefix] [ txt "log in" ]
     ]
 
 class virtual t = object (self : #Site.raw_resource)
