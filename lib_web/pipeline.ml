@@ -9,12 +9,21 @@ let render_svg ctx a =
       | (_, []) -> None
       | (k, v :: _) -> Some (k, v)
     ) in
-  let old_query = Uri.query uri in
+  let old_query = Uri.query uri |> List.filter (fun (a, b) -> a <> "" && b <> []) in
+  List.iter (fun (a, b) -> Format.printf "%s -> [ %s ]@." a (String.concat "/" b)) old_query;
   let collapse_link ~k ~v =
       let query = (k, [v]) :: List.remove_assoc k old_query in
-      Some (Uri.make ~path:"/" ~query () |> Uri.to_string |> Utils.ps_href ~prefix)
+      let path = match prefix with
+        | None -> "/"
+        | Some p -> "/" ^ p
+      in
+      Some (Uri.make ~path ~query () |> Uri.to_string)
   and job_info { Current.Metadata.job_id; update } =
-    let url = job_id |> Option.map (fun id -> Fmt.str "/job/%s" id |> Utils.ps_href ~prefix) in
+    let path = match prefix with
+      | None -> ""
+      | Some p -> "/" ^ p
+    in
+    let url = job_id |> Option.map (fun id -> Fmt.str "%s/job/%s" path id) in
     update, url
   in
   let dotfile = Fmt.to_to_string (Current.Analysis.pp_dot ~env ~collapse_link ~job_info) a in

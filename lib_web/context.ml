@@ -77,9 +77,9 @@ let template t ?refresh contents =
     html
       (head (title (txt site.name)) (
           let tags = [
-            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/normalize.css") ();
-            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/ansi.css") ();
-            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~prefix "/css/style.css") ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~root:true ~prefix "/css/normalize.css") ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~root:true ~prefix "/css/ansi.css") ();
+            link ~rel:[ `Stylesheet ] ~href:(Utils.ps_href ~root:true ~prefix "/css/style.css") ();
             link ~rel:[ `Icon ] ~href:img_dashboard_logo ();
             meta ~a:[a_charset "UTF-8"] ();
           ] in
