@@ -39,7 +39,7 @@ let r ~engine = object
     let config = Current.Engine.config engine in
     let { Current.Engine.value; jobs = _ } = Current.Engine.state engine in
     let verbatim_query = Uri.verbatim_query uri in
-    let path = Option.value ~default:"" prefix ^ "/pipeline.svg?" ^ (Option.value verbatim_query ~default:"") in
+    let path = "/pipeline.svg?" ^ (Option.value verbatim_query ~default:"") in
     Context.respond_ok ctx ?refresh:ctx.site.refresh_pipeline [
       div [
         object_ ~a:[Utils.p_data ~prefix path] [txt "Pipeline diagram"];
